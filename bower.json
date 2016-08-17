@@ -1,0 +1,28 @@
+{
+  "name": "define-es6",
+  "description": "make amd module definitions",
+  "main": [
+    "define-es6.js"
+  ],
+  "moduleType": [
+    "globals",
+    "es6"
+  ],
+  "keywords": [
+    "amd",
+    "define",
+    "modules",
+    "es6"
+  ],
+  "authors": [
+    "Claus Petersen <clayzzz@hotmail.dk>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "node_modules"
+  ],
+  "private": false,
+  "dependencies": {
+    "request-es6": "*"
+  }
+}
