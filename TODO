@@ -1,0 +1,13 @@
+* define
+** id
+DONE register id
+TODO format spec
+** dependencies
+TODO resolving when multiple defines in same script.
+Must return immidiately if module dependencies can be instantly delivered.
+DONE aquirering modules
+* config
+** path setup
+TODO configure function for setup
+* require
+TODO commonjs spec with amd spec modifications

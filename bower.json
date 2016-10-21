@@ -1,6 +1,6 @@
 {
   "name": "define-es6",
-  "description": "make amd module definitions",
+  "description": "make amd module definitions with a simple amd implementation",
   "main": [
     "define-es6.js"
   ],
@@ -21,8 +21,5 @@
   "ignore": [
     "node_modules"
   ],
-  "private": false,
-  "dependencies": {
-    "request-es6": "*"
-  }
+  "private": false
 }

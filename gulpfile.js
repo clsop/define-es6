@@ -20,22 +20,22 @@ gulp.task('default', ['dist', 'debug']);
 /****************/
 /* distribution */
 /****************/
-gulp.task('dist', (cb) => {
-    let b = browserify({
-        entries: 'src/Define.js',
-        debug: false
-    });
+// gulp.task('dist', (cb) => {
+//     let b = browserify({
+//         entries: 'src/Define.js',
+//         debug: false
+//     });
 
-    pump([
-        b.transform(babelify, {
-            presets: ['es2015']
-        }).bundle(),
-        source('define-es6.js'),
-        buffer(),
-        uglify(),
-        gulp.dest(distBuild)
-    ], cb);
-});
+//     pump([
+//         b.transform(babelify, {
+//             presets: ['es2015']
+//         }).bundle(),
+//         source('define-es6.js'),
+//         buffer(),
+//         uglify(),
+//         gulp.dest(distBuild)
+//     ], cb);
+// });
 
 gulp.task('debug', (cb) => {
     let b = browserify({
@@ -67,7 +67,7 @@ gulp.task('debug', (cb) => {
 /***************/
 gulp.task('build-tests', (cb) => {
     let b = browserify({
-        entries: ['test/object.js', 'test/common.js', 'test/success.js', 'test/fail.js'],
+        entries: ['test/id.js', 'test/dependencies.js', 'test/structure.js', 'test/define.js', 'test/config.js'],
         debug: true
     });
 
@@ -81,9 +81,10 @@ gulp.task('build-tests', (cb) => {
     ], cb);
 });
 
-gulp.task('build-success-tests', (cb) => {
+
+gulp.task('build-id-tests', (cb) => {
     let b = browserify({
-        entries: 'test/success.js',
+        entries: 'test/id.js',
         debug: true
     });
 
@@ -91,15 +92,15 @@ gulp.task('build-success-tests', (cb) => {
             presets: ['es2015']
         })
         .bundle(),
-        source('success.js'),
+        source('id.js'),
         buffer(),
         gulp.dest(testBuild)
     ], cb);
 });
 
-gulp.task('build-fail-tests', (cb) => {
+gulp.task('build-dependencies-tests', (cb) => {
     let b = browserify({
-        entries: 'test/fail.js',
+        entries: 'test/dependencies.js',
         debug: true
     });
 
@@ -107,39 +108,58 @@ gulp.task('build-fail-tests', (cb) => {
             presets: ['es2015']
         })
         .bundle(),
-        source('fail.js'),
+        source('dependencies.js'),
         buffer(),
         gulp.dest(testBuild)
     ], cb);
 });
 
-gulp.task('build-object-tests', (cb) => {
+gulp.task('build-define-tests', (cb) => {
     let b = browserify({
-        entries: 'test/object.js',
+        entries: 'test/define.js',
         debug: true
     });
 
     pump([b.transform(babelify, {
             presets: ['es2015']
+            //plugins: ['syntax-flow', 'transform-flow-strip-types']
         })
         .bundle(),
-        source('object.js'),
+        source('define.js'),
         buffer(),
         gulp.dest(testBuild)
     ], cb);
 });
 
-gulp.task('build-common-tests', (cb) => {
+gulp.task('build-config-tests', (cb) => {
     let b = browserify({
-        entries: 'test/common.js',
+        entries: 'test/config.js',
         debug: true
     });
 
     pump([b.transform(babelify, {
             presets: ['es2015']
+            //plugins: ['syntax-flow', 'transform-flow-strip-types']
         })
         .bundle(),
-        source('common.js'),
+        source('config.js'),
+        buffer(),
+        gulp.dest(testBuild)
+    ], cb);
+});
+
+gulp.task('build-structure-tests', (cb) => {
+    let b = browserify({
+        entries: 'test/structure.js',
+        debug: true
+    });
+
+    pump([b.transform(babelify, {
+            presets: ['es2015']
+            //plugins: ['syntax-flow', 'transform-flow-strip-types']
+        })
+        .bundle(),
+        source('structure.js'),
         buffer(),
         gulp.dest(testBuild)
     ], cb);
@@ -159,8 +179,8 @@ gulp.task('tests', ['build-tests'], () => {
         }));
 });
 
-gulp.task('tests:success', ['build-success-tests'], () => {
-    return gulp.src(`${testBuild}/success.js`, {
+gulp.task('tests:id', ['build-id-tests'], () => {
+    return gulp.src(`${testBuild}/id.js`, {
             read: false
         })
         .pipe(mocha({
@@ -170,8 +190,8 @@ gulp.task('tests:success', ['build-success-tests'], () => {
         }));
 });
 
-gulp.task('tests:fail', ['build-fail-tests'], () => {
-    return gulp.src(`${testBuild}/fail.js`, {
+gulp.task('tests:dependencies', ['build-dependencies-tests'], () => {
+    return gulp.src(`${testBuild}/dependencies.js`, {
             read: false
         })
         .pipe(mocha({
@@ -181,8 +201,8 @@ gulp.task('tests:fail', ['build-fail-tests'], () => {
         }));
 });
 
-gulp.task('tests:object', ['build-object-tests'], () => {
-    return gulp.src(`${testBuild}/object.js`, {
+gulp.task('tests:define', ['build-define-tests'], () => {
+    return gulp.src(`${testBuild}/define.js`, {
             read: false
         })
         .pipe(mocha({
@@ -192,8 +212,19 @@ gulp.task('tests:object', ['build-object-tests'], () => {
         }));
 });
 
-gulp.task('tests:common', ['build-common-tests'], () => {
-    return gulp.src(`${testBuild}/common.js`, {
+gulp.task('tests:config', ['build-config-tests'], () => {
+    return gulp.src(`${testBuild}/config.js`, {
+            read: false
+        })
+        .pipe(mocha({
+            reporter: reporter,
+            ui: 'tdd',
+            bail: bailOnFirstFail
+        }));
+});
+
+gulp.task('tests:structure', ['build-structure-tests'], () => {
+    return gulp.src(`${testBuild}/structure.js`, {
             read: false
         })
         .pipe(mocha({
