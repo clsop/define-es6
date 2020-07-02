@@ -20,22 +20,22 @@ gulp.task('default', ['dist', 'debug']);
 /****************/
 /* distribution */
 /****************/
-// gulp.task('dist', (cb) => {
-//     let b = browserify({
-//         entries: 'src/Define.js',
-//         debug: false
-//     });
+gulp.task('dist', (cb) => {
+    let b = browserify({
+        entries: 'src/Define.js',
+        debug: false
+    });
 
-//     pump([
-//         b.transform(babelify, {
-//             presets: ['es2015']
-//         }).bundle(),
-//         source('define-es6.js'),
-//         buffer(),
-//         uglify(),
-//         gulp.dest(distBuild)
-//     ], cb);
-// });
+    pump([
+        b.transform(babelify, {
+            presets: ['es2015']
+        }).bundle(),
+        source('define-es6.js'),
+        buffer(),
+        uglify(),
+        gulp.dest(distBuild)
+    ], cb);
+});
 
 gulp.task('debug', (cb) => {
     let b = browserify({
