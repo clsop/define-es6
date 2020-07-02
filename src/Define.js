@@ -1,6 +1,7 @@
 'use strict';
 
 import Utility from './Utility';
+import LoadScript from './ScriptLoader';
 import IdArgHandler from './handlers/IdArgHandler';
 import DependencyArgHandler from './handlers/DependencyArgHandler';
 import FactoryArgHandler from './handlers/FactoryArgHandler';
@@ -11,8 +12,9 @@ import DependencyError from './exceptions/DependencyError';
 // private imports
 import _require from './Require';
 import _config from './Config';
-import _configs from './vars/Configs';
 import _deps from './vars/Dependencies';
+
+let _depsResolves = [];
 
 // TODO: multiple define calls in one script
 let define = global.define || ((param1, param2, param3) => {
@@ -33,96 +35,104 @@ let define = global.define || ((param1, param2, param3) => {
 
     let _exports = Object.create(null);
     let _module = Object.create(null);
-    Utility.defineProp(_module, 'id', id, true);
+    Utility.defineProperty(_module, 'id', id, true);
 
     // default free vars
     let _defaultDeps = new Map([
-        ["require", require],
+        ["require", _require],
         ["exports", _exports],
         ["module", _module]
     ]);
-    let depsResolves = [];
-    let instantDelivery = false;
+    let hasUnresolvedDependencies = false; // if no dependencies needs to be resolved, don't use promises
+
+    let isDependencyResolved = (depStatus, depId) => _defaultDeps.has(depId) || depStatus !== null && !(depStatus instanceof Array);
+    let getDepStatus = (depId) => _deps.has(depId) ? _deps.get(depId) : null;
+    let onDepsResolved = (dependencies) => {
+        let exported = typeof factory === 'function' ? factory(...dependencies) : factory;
+        let exportedApi = exported ? exported : _defaultDeps.get('exports');
+        let depStatus = getDepStatus(_module.id);
+
+        if (depStatus !== null && depStatus instanceof Array) {
+            let callbacks = depStatus;
+            
+            _deps.set(_module.id, exportedApi);
+            callbacks.forEach(callback => {
+                callback(exportedApi);
+            });
+        } else if (depStatus === null) {
+            _deps.set(_module.id, exportedApi);
+        }
+    };
 
     if (dependencyIds && dependencyIds.length > 0) {
-        // can instantly deliver dependencies
-        instantDelivery = dependencyIds.every((depId) => {
-            let depStatus = _deps.has(depId) ? _deps.get(depId) : null;
-
-            return _defaultDeps.has(depId) || depStatus !== null && !(depStatus instanceof Array);
+        // all dependencies are resolved prior to resolving
+        hasUnresolvedDependencies = dependencyIds.some((depId) => {
+            return !isDependencyResolved(getDepStatus(depId), depId);
         });
 
-        if (instantDelivery) {
-            dependencyIds.forEach(depId => {
-                let depStatus = _deps.has(depId) ? _deps.get(depId) : null;
+        // TODO: determine resolved vs pending
+        dependencyIds.forEach(depId => {
+            let depStatus = getDepStatus(depId);
 
-                if (_defaultDeps.has(depId)) {
-                    depsResolves.push(_defaultDeps.get(depId));
-                } else if (depStatus !== null && !(depStatus instanceof Array)) { // dependency has previously been resolved
-                    depsResolves.push(depStatus);
-                }
-            });
-        } else {
-            dependencyIds.forEach(depId => {
-                depsResolves.push(new Promise((resolveDep, rejectDep) => {
-                    let depStatus = _deps.has(depId) ? _deps.get(depId) : null;
+            // dependency is one of the default free var api
+            if (_defaultDeps.has(depId)) {
+                _depsResolves.push(_defaultDeps.get(depId));
+            } else if (isDependencyResolved(depStatus, depId)) { // dependency has previously been resolved
+                _depsResolves.push(depStatus);
+            } else {
+                _depsResolves.push(new Promise((resolveDep, rejectDep) => {
+                    let depStatus = getDepStatus(depId);
 
                     // dependency is one of the default free var api
-                    if (_defaultDeps.has(depId)) {
-                        resolveDep(_defaultDeps.get(depId));
-                    } else if (depStatus !== null && !(depStatus instanceof Array)) { // dependency has previously been resolved
-                        resolveDep(depStatus);
-                    } else {
-                        // TODO: reject after timeout ?
-                        if (depStatus) {
-                            depStatus.push((exportedApi) => resolveDep(exportedApi));
-                        } else {
-                            _deps.set(depId, [(exportedApi) => resolveDep(exportedApi)]);    
-                        }
+                    // if (_defaultDeps.has(depId)) {
+                    //     resolveDep(_defaultDeps.get(depId));
+                    // } else if (isDependencyResolved(depStatus, depId)) { // dependency has previously been resolved
+                    //     resolveDep(depStatus);
+                    // } else {
+                    // TODO: verify added
+                    // dependency is resolving, add done callback
+                    if (depStatus !== null) {
+                        depStatus.push((exportedApi) => resolveDep(exportedApi));
+                    } else { // dependency should be resolved
+                        _deps.set(depId, [(exportedApi) => resolveDep(exportedApi)]);
 
                         // TODO: module path
-                        Utility.scriptImport(depId, `${_configs.baseUrl}${depId}`).catch(reason => {
+                        // TODO: reject if timeout ?
+                        LoadScript(depId, `${_config.get('baseUri')}${depId}.js`, _config.get('eagerness')).then((moduleId) => {
+                            resolveDep(moduleId);
+                        }).catch(reason => {
                             rejectDep(reason);
                         });
+                        // Utility.scriptImport(depId, `${_config.get('baseUri')}${depId}`).catch(reason => {
+                        //     rejectDep(reason);
+                        // });
                     }
+                    //}
                 }));
-            });
-        }
-    } else {
-        // TODO: scan factory for dependencies
-        // no dependencies defined, add default require, exports and module
-        depsResolves.push(_defaultDeps.get("require"), _exports, resolveDep(_module));
-    }
-
-    if (instantDelivery) {
-        let exported = typeof factory === 'function' ? factory(...depsResolves) : factory;
-        let exportedApi = exported ? exported : _defaultDeps.get('exports');
-
-        _deps.set(_module.id, exportedApi);
-    } else {
-        Promise.all(depsResolves).then((resolvedDeps) => {
-            let exported = typeof factory === 'function' ? factory(...resolvedDeps) : factory;
-            let depStatus = _deps.has(_module.id) ? _deps.get(_module.id) : null;
-            let exportedApi = exported ? exported : _defaultDeps.get('exports');
-
-            // use callback to notify waiting module for dependency resolving
-            if (depStatus !== null && depStatus instanceof Array) {
-                let callbacks = depStatus;
-
-                _deps.set(_module.id, exportedApi);
-                callbacks.forEach(callback => {
-                    callback(exportedApi);
-                });
-            } else if (depStatus === null) {
-                _deps.set(_module.id, exportedApi);
             }
         });
+    } else {
+        // TODO: scan factory for require calls
+        // no dependencies defined, add default require, exports and module
+        _depsResolves.push(_require, _exports, _module);
+    }
+
+    if (hasUnresolvedDependencies) {
+        let unresolved = _depsResolves.filter((dep) => dep instanceof Promise);
+        let resolved = _depsResolves.filter((dep) => !(dep instanceof Promise));
+
+        Promise.all(unresolved).then((resolvedDeps) => {
+            resolved.push(resolvedDeps);
+            onDepsResolved(resolved);
+        });
+    } else {
+        onDepsResolved(_depsResolves);
     }
 });
 
 // add api properties
-Utility.defineProp(define, 'config', _config);
-Utility.defineProp(define, 'amd', {
+Utility.defineProperty(define, 'config', _config);
+Utility.defineProperty(define, 'amd', {
     multiversion: false
 });
 
@@ -130,5 +140,5 @@ export default define;
 
 // browser env
 if (global.window) {
-    Utility.defineProp(window, 'define', define);
+    Utility.defineProperty(window, 'define', define);
 }

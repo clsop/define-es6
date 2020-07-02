@@ -2,4 +2,4 @@
 
 // dependencies
 let deps = new Map();
-export default (() => deps)();
+export default deps;

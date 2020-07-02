@@ -6,22 +6,36 @@ import ConfigError from './exceptions/ConfigError';
 // private imports
 import _configs from './vars/Configs';
 
+
 let config = (configObj) => {
-    if (configObj === undefined ||
-        (typeof configObj === 'object' && Object.getOwnPropertyNames(configObj).length === 0) // empty and null object
-        || typeof configObj !== 'object') {
-        throw new ConfigError('config object not given or empty.');
-    } else if (Object.getOwnPropertyNames(_configs).length > 0) {
-    	throw new ConfigError('config object is already defined.');
+	var configNames = Object.getOwnPropertyNames(configObj);
+
+    if (configObj === undefined || typeof configObj !== 'object') {
+        throw new ConfigError('config object not given.');
+	} else if (configNames.length === 0) {
+		throw new ConfigError('config object empty.');
     }
 
-    if (configObj.hasOwnProperty('baseUrl')) {
-    	Utility.defineProp(_configs, 'baseUrl', configObj.baseUrl);
-    } else {
-    	Utility.defineProp(_configs, 'baseUrl', '/');
+    // defaults
+	Utility.defineProperty(_configs, 'baseUri', '/', false, true);
+	Utility.defineProperty(_configs, 'eagerness', 'no hurry', false, true);
+	
+    for (var index in configNames) {
+    	let configName = configNames[index];
+    	_configs[configName] = configObj[configName];
     }
-
-    // TODO: setup configs
 };
+let get = function(name) {
+	// return all config vars
+	if (name === undefined) {
+		return _configs;
+	} else if (!_configs.hasOwnProperty(name)) {
+		throw new ConfigError(`no such config var "${name}".`);
+	}
+
+	return _configs[name];
+};
+
+Utility.defineProperty(config, 'get', get);
 
 export default config;

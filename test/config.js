@@ -23,5 +23,17 @@ export default (() => {
             (() => define.config({})).should.throwError();
             (() => define.config({ test: [] })).should.not.throwError();
         });
+
+        test('get default config vars when not defined', () => {
+            (define.config.get()).should.have.properties(['baseUri', 'eagerness']);;
+        });
+
+        test('get config property, defined or default', () => {
+            define.config.get('baseUri').should.equal('/');
+
+            let baseUri = '/test/';
+            define.config({ baseUri: baseUri });
+            define.config.get('baseUri').should.equal(baseUri);
+        });
     });
 })();

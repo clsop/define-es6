@@ -9,7 +9,7 @@ const pump = require('pump');
 const mocha = require('gulp-mocha');
 
 const reporter = 'nyan';
-const bailOnFirstFail = false;
+const bailOnFirstFail = true;
 
 const distBuild = 'build/dist';
 const debugBuild = 'build/debug';
@@ -47,7 +47,7 @@ gulp.task('debug', (cb) => {
         b.transform(babelify, {
             presets: ['es2015']
         }).bundle(),
-        source('define-es6.js'),
+        source('define-me.js'),
         buffer(),
         sourcemaps.init({
             loadMaps: true,

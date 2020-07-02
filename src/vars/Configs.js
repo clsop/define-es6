@@ -1,4 +1,4 @@
 'strict';
 
-let configs = Object.create(null);
-export default (() => configs)();
+let configs = Object.create(Object.prototype);
+export default configs;

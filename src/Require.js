@@ -14,6 +14,6 @@ let require = (moduleId) => {
 	// TODO: require function
 	return _deps.get(moduleId);
 };
-Utility.defineProp(require, 'main', undefined, true);
+Utility.defineProperty(require, 'main', undefined, true);
 
 export default require;
